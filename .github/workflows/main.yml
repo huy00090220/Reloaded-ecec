@@ -1,0 +1,29 @@
+name: Build EXE
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Скачиваем код
+        uses: actions/checkout@v3
+
+      - name: Устанавливаем Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Ставим PyInstaller
+        run: pip install pyinstaller==5.13
+
+      - name: Собираем EXE
+        run: pyinstaller --onefile loader.py
+
+      - name: Сохраняем результат
+        uses: actions/upload-artifact@v3
+        with:
+          name: loader-exe
+          path: dist/loader.exe
