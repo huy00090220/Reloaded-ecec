@@ -1,29 +1,55 @@
-name: Build EXE
+# .github/workflows/build_exe.yml
+name: Build Windows Executable
 
+# Определяет, когда запускать этот рабочий процесс
 on:
+  # Запускать при каждом изменении (push) в ветке main
   push:
-    branches: [ "main" ]
+    branches: [ main ]
+  # Позволяет запускать сборку вручную через интерфейс GitHub
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-windows:
+    # Указываем, что сборка должна проходить на операционной системе Windows
     runs-on: windows-latest
+    
     steps:
-      - name: Скачиваем код
-        uses: actions/checkout@v4
+    - name: Checkout code
+      # Получаем код из репозитория
+      uses: actions/checkout@v4
 
-      - name: Устанавливаем Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    - name: Set up Python 3.10
+      # Устанавливаем необходимую версию Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-      - name: Ставим PyInstaller
-        run: pip install pyinstaller==5.13
+    - name: Install dependencies
+      # Устанавливаем PyInstaller и зависимости лаунчера из requirements.txt
+      run: pip install -r requirements.txt
 
-      - name: Собираем EXE
-        run: pyinstaller --onefile loader.py
+    - name: Run PyInstaller to build EXE
+      # Главная команда:
+      # --onefile (-F): упаковывает все в один EXE
+      # --windowed (-w): убирает черное консольное окно
+      run: pyinstaller --onefile --windowed loader.py
+      
+    - name: Get Artifact Name
+      # Используем PowerShell для определения имени созданного файла, 
+      # чтобы избежать ошибок
+      id: get_artifact_name
+      run: |
+        $exe_path = Get-ChildItem -Path .\dist\*.exe | Select-Object -ExpandProperty FullName
+        $file_name = Get-Item $exe_path | Select-Object -ExpandProperty BaseName
+        echo "filename=$file_name.exe" >> $env:GITHUB_OUTPUT
+        echo "path=$exe_path" >> $env:GITHUB_OUTPUT
+      shell: powershell
 
-      - name: Сохраняем результат
-        uses: actions/upload-artifact@v4
-        with:
-          name: loader-exe
-          path: dist/loader.exe
+    - name: Upload Artifact
+      # Сохраняем готовый EXE-файл как "артефакт", доступный для скачивания
+      uses: actions/upload-artifact@v4
+      with:
+        name: SwiftDLC_Launcher.exe
+        path: ${{ steps.get_artifact_name.outputs.path }}
+        retention-days: 7
